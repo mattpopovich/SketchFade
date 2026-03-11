@@ -351,14 +351,17 @@ struct SettingsSheet: View {
 // MARK: - Main View
 
 struct ContentView: View {
-    @State private var strokes       : [Stroke]   = []
-    @State private var currentStroke : Stroke?    = nil
-    @State private var bgColor       : Color      = .white
-    @State private var penColor      : Color      = .black
-    @State private var brush         : BrushType  = .pencil
-    @State private var fadeDuration  : Double     = 5.0
-    @State private var showSettings  : Bool       = false
-    @State private var showClearAlert: Bool       = false
+    @State private var strokes            : [Stroke]   = []
+    @State private var currentStroke      : Stroke?    = nil
+    @State private var bgColor            : Color      = .white
+    @State private var penColor           : Color      = .black
+    @State private var brush              : BrushType  = .pencil
+    @State private var fadeDuration       : Double     = 5.0
+    @State private var showSettings       : Bool       = false
+    @State private var showClearAlert     : Bool       = false
+    @State private var strokeCount        : Int        = 0
+    @State private var showResetCountAlert: Bool       = false
+    @State private var counterBump        : Bool       = false
 
     private let fps: Double = 30
 
@@ -380,6 +383,13 @@ struct ContentView: View {
                 onEnd:  {
                     if let s = currentStroke { strokes.append(s) }
                     currentStroke = nil
+                    strokeCount += 1
+                    withAnimation(.interpolatingSpring(stiffness: 600, damping: 12)) {
+                        counterBump = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        counterBump = false
+                    }
                 }
             )
             .ignoresSafeArea()
@@ -418,7 +428,8 @@ struct ContentView: View {
 
             // ── Top Bar (overlaid)
             VStack {
-                HStack {
+                HStack(alignment: .top, spacing: 10) {
+
                     // Settings
                     Button { showSettings = true } label: {
                         Image(systemName: "gearshape.fill")
@@ -429,13 +440,41 @@ struct ContentView: View {
 
                     Spacer()
 
-                    // Timer badge
-                    HStack(spacing: 5) {
-                        Image(systemName: "timer").font(.caption.weight(.semibold))
-                        Text("\(Int(fadeDuration))s").font(.caption.monospacedDigit().bold())
+                    // Centre column: timer + stroke counter stacked
+                    VStack(spacing: 6) {
+
+                        // Fade timer badge
+                        HStack(spacing: 5) {
+                            Image(systemName: "timer").font(.caption.weight(.semibold))
+                            Text("\(Int(fadeDuration))s").font(.caption.monospacedDigit().bold())
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(.ultraThinMaterial, in: Capsule())
+
+                        // Stroke counter badge + reset button side-by-side
+                        HStack(spacing: 6) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "hand.tap.fill")
+                                    .font(.caption.weight(.semibold))
+                                Text("\(strokeCount)")
+                                    .font(.caption.monospacedDigit().bold())
+                                    .contentTransition(.numericText())
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .scaleEffect(counterBump ? 1.25 : 1.0)
+
+                            // Reset counter button
+                            Button {
+                                showResetCountAlert = true
+                            } label: {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .font(.caption.weight(.bold))
+                                    .padding(7)
+                                    .background(.ultraThinMaterial, in: Circle())
+                            }
+                        }
                     }
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(.ultraThinMaterial, in: Capsule())
 
                     Spacer()
 
@@ -462,6 +501,10 @@ struct ContentView: View {
         }
         .alert("Clear Canvas?", isPresented: $showClearAlert) {
             Button("Clear", role: .destructive) { strokes.removeAll() }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Reset Counter?", isPresented: $showResetCountAlert) {
+            Button("Reset", role: .destructive) { strokeCount = 0 }
             Button("Cancel", role: .cancel) {}
         }
     }
