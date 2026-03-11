@@ -35,7 +35,7 @@ enum BrushType: String, CaseIterable, Identifiable {
         case .crayon:      return 10.0
         case .sharpie:     return 5.5
         case .highlighter: return 26.0
-        case .inkBlob:     return 15.0
+        case .inkBlob:     return 70.0
         }
     }
 
